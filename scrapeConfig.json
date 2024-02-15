@@ -1,0 +1,35 @@
+{
+  "web_pages": [
+    {
+      "page_name": "Municipal Annual Financial Report",
+      "page_url": "https://munstats.pa.gov/Reports/ReportInformation2.aspx?report=mAfrForm",
+      "select_options": [
+        {
+          "name": "County",
+          "id": "ContentPlaceHolder1_ddCountyId",
+          "secondary_load": false
+        },
+        {
+          "name": "Municipality",
+          "id": "ContentPlaceHolder1_ddMuniId",
+          "secondary_load": true
+        },
+        {
+          "name": "Year",
+          "id": "ContentPlaceHolder1_ddYear",
+          "secondary_load": false
+        }
+      ]
+    },
+    {
+      "page_name": "Municipal Police Service",
+      "page_url": "https://munstats.pa.gov/Reports/ReportInformation2.aspx?report=MuniPolice_Excel",
+      "select_options": []
+    },
+    {
+      "page_name": "County / Municipal Demographic",
+      "page_url": "https://munstats.pa.gov/Reports/ReportInformation2.aspx?report=CountyMuniDemo_Excel",
+      "select_options": []
+    }
+  ]
+}
