@@ -26,6 +26,33 @@ class CacheManager {
         this.cacheFinReportData = this.cacheFinReportData.bind(this);
     }
 
+    resetCache() {
+        // Reset the cache by dropping the table and creating a new one
+        this.deleteFinReportTable();
+        this.createFinReportTable();
+    }
+
+    deleteFinReportTable() {
+        this.db.run(`DROP TABLE IF EXISTS FinReportCache`, (err) => {
+            if (err) {
+                console.error('Error dropping table', err.message);
+            } else {
+                console.log('Table is dropped.');
+            }
+        });
+    }
+
+
+    deleteUnretrievedReports() {
+            this.db.run(`DELETE FROM FinReportCache WHERE status in ('NOT_ATTEMPTED', 'RETRIEVAL_FAILED')`, (err) => {
+                if (err) {
+                    console.error('Error deleting unretrieved reports', err.message);
+                } else {
+                    console.log('Unretrieved reports deleted.');
+                }
+            });
+        }
+
     createFinReportTable() {
         this.db.run(`CREATE TABLE IF NOT EXISTS FinReportCache (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,16 +73,6 @@ class CacheManager {
         });
     }
 
-    deleteFinReportTable() {
-        this.db.run(`DROP TABLE IF EXISTS FinReportCache`, (err) => {
-            if (err) {
-                console.error('Error dropping table', err.message);
-            } else {
-                console.log('Table is dropped.');
-            }
-        });
-}
-
     validateFinReportData() {
         // Check if data is valid. Valid conditions include:
         // - Each municipality is associated with only one county
@@ -65,7 +82,18 @@ class CacheManager {
     };
 
     cacheFinReportData(county, municipality, year, status) {
-        // Prepared statement to insert or replace based on unique constraint, using the 'status' column
+        // Check if the entry already exists in the database
+        this.db.get(`SELECT * FROM FinReportCache WHERE county = ? AND municipality = ? AND year = ?`, [county, municipality, year], (err, row) => {
+            if (err) {
+                return console.error('Error querying the database', err.message);
+            }
+            // If the entry exists, log a message and return immediately
+            if (row) {
+                return console.log(`Entry with county ${county}, municipality ${municipality}, and year ${year} already exists.`);
+            }
+        });
+
+        // If the entry does not exist, proceed with the insertion
         let stmt = this.db.prepare(`INSERT INTO FinReportCache (county, municipality, year, status) VALUES(?, ?, ?, ?)
                          ON CONFLICT(county, municipality, year) DO UPDATE SET status = excluded.status`);
 
@@ -90,69 +118,69 @@ class CacheManager {
     }
 }
 
-async function getAndFilterOptions(page, selector, additionalArgs = {}, filterValue = "-1") {
+async function getAndFilterOptions(page, selector, filterValue = "-1") {
     // If additionalArgs are provided for this selector, handle them accordingly
-    const options = additionalArgs.oldmunicipalityOptions && selector === municipalitySelector
-        ? await getOptions(page, selector, additionalArgs.oldmunicipalityOptions)
-        : await getOptions(page, selector);
+    const options = await getOptions(page, selector);
     return options.filter(option => option !== filterValue);
 }
 
-async function selectOptionAndCache(page, selections, cacheFunction) {
-    const { countyName, municipalityName, yearName } = selections;
-    if (countyName && municipalityName && yearName) {
-        cacheFunction(countyName, municipalityName, yearName, Status.NOT_ATTEMPTED);
-    }
-}
+async function processFinReportSelections(page, cacheFunction) {
+    // Year options are the same for all counties and municipalities
+    const yearOptions = await getAndFilterOptions(page, finReportSelectors[2].selector);
+    const countyOptions = await getAndFilterOptions(page, finReportSelectors[0].selector);
+    for (const countyValue of countyOptions) {
+        // Get old municipality options to pass to the next level
+        let oldMunicipalityOptions = await getAndFilterOptions(page, municipalitySelector);
+        await selectOption(page, finReportSelectors[0].selector, countyValue);
+        const countyName = await getSelectedOptionText(page, finReportSelectors[0].selector);
+        console.log('Selected county:', countyName);
+        // Get new municipality options to pass to the next level. If they are the same as the old ones, repeat until this is not the case
+        let newMunicipalityOptions;
+        do {
+            newMunicipalityOptions = await getAndFilterOptions(page, municipalitySelector);
+            // console.log('New municipality options:', JSON.stringify(newMunicipalityOptions));
+            // console.log('Old municipality options:', JSON.stringify(oldMunicipalityOptions));
+        } while (JSON.stringify(oldMunicipalityOptions) === JSON.stringify(newMunicipalityOptions));
 
-async function processSelections(page, selectors, cacheFunction, selections = {}, index = 0, additionalArgs = {oldMunicipalityOptions: ''}) {
-    if (index >= selectors.length) {
-        await selectOptionAndCache(page, selections, cacheFunction);
-        return;
-    }
-
-    const { selector, type } = selectors[index];
-    const options = await getAndFilterOptions(page, selector, additionalArgs);
-
-    for (const value of options) {
-        await selectOption(page, selector, value);
-        const name = await getSelectedOptionText(page, selector);
-        if (name === "[Select a Value]") continue
-        console.log(`Selected ${type}:`, name);
-
-        // Prepare additional arguments for the next level, if any
-        let nextAdditionalArgs = {};
-        if (type === 'county') {
-            // Assume getOptions for municipalitySelector needs oldMunicipalityOptions which we just fetched
-            nextAdditionalArgs.oldMunicipalityOptions = options;
+        for (const municipalityValue of newMunicipalityOptions) {
+            await selectOption(page, municipalitySelector, municipalityValue);
+            const municipalityName = await getSelectedOptionText(page, municipalitySelector);
+            console.log('Selected municipality:', municipalityName);
+            for (const yearValue of yearOptions) {
+                cacheFunction(countyName, municipalityName, yearValue, Status.NOT_ATTEMPTED);
+            }
         }
-
-        await processSelections(page, selectors, cacheFunction, { ...selections, [`${type}Name`]: name }, index + 1, nextAdditionalArgs);
     }
 }
-
 
 async function processAllOptions(page, cache_manager) {
-    await processSelections(page, finReportSelectors, cache_manager.cacheFinReportData);
+    await processFinReportSelections(page, cache_manager.cacheFinReportData);
+    // await processSelections(page, finReportSelectors, cache_manager.cacheFinReportData);
 }
 
 
+async function resetCache() {
+    // Cache reset entails:
+    // - Dropping the table
+    // - Creating a new table
+
+    const cache_manager = new CacheManager();
+    cache_manager.resetCache();
+    cache_manager.close();
+}
 
 async function prepareCache(url) {
     // This function should be called before the main loop to ensure that the cache is prepared
     // Cache preparation entails:
-    // - Ensuring the database is created (or, if created, truncated)
-    // - Ensuring the table is created
-    // - Iterating through all possible combinations of country, municipality, and year,
+    // - Iterating through all possible combinations of country, municipality, and year not already in the cache,
     //    and inserting them into the cache with a status of 'NOT_ATTEMPTED'
     // - Ensuring that the database is closed
     const cache_manager = new CacheManager();
-    cache_manager.deleteFinReportTable();
-    cache_manager.createFinReportTable();
+    cache_manager.deleteUnretrievedReports();
     const { page, _, browser } = await launchBrowser(url);
     await processAllOptions(page, cache_manager).catch(console.error);
     await browser.close()
     cache_manager.close();
 }
 
-module.exports = { CacheManager, prepareCache }
+module.exports = { CacheManager, prepareCache, resetCache }

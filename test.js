@@ -1,4 +1,3 @@
-const { prepareCache } = require('./CacheManager');
 
 const url = 'https://munstats.pa.gov/Reports/ReportInformation2.aspx?report=mAfrForm'
 const yearSelector = 'select[name="ctl00$ContentPlaceHolder1$ddYear"]';
@@ -14,6 +13,8 @@ const {actionWithRetry, selectOption} = require('./util');
 const path = require('path');
 const fs = require('fs');
 const {scrapeData} = require("./Scraper");
+const { prepareCache, resetCache } = require('./CacheManager');
+
 
 function xlsxExists(directory) {
     const files = fs.readdirSync(directory);
@@ -130,6 +131,8 @@ async function downloadReport(page, client, countyName, authorityName, yearValue
         await prepareCache(url);
     } else if (command === 'scrapeData') {
         await scrapeData();
+    } else if (command === 'resetCache') {
+        await resetCache();
     } else {
         console.error('Invalid command:', command);
         process.exit(1);
