@@ -216,16 +216,6 @@ class Scraper {
         console.log('Updated cache with police and total expenditures')
     }
 
-    async updateEntryDownloadUrl(county, municipality, year, downloadUrl) {
-        this.db.run(`UPDATE FinReportCache SET download_url = ?, status='RETRIEVED'
-            WHERE county = ? AND municipality = ? AND year = ?`,
-            [downloadUrl, county, municipality, year], (err) => {
-            if (err) {
-                console.error('Error updating cache', err.message);
-            }
-        });
-    }
-
     async clickDisplayReportButton(page) {
         // console.log("Attempting to click Display Report button")
         await actionWithRetry(async () => {
