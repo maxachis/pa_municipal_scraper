@@ -35,7 +35,7 @@ class CacheManager {
               download_url TEXT,
               police_expenditures REAL,
               total_expenditures REAL,
-              status TEXT CHECK( status IN ('RETRIEVED','RETRIEVAL_FAILED','UNAVAILABLE', 'NOT_ATTEMPTED') ),
+              status TEXT CHECK( status IN ('RETRIEVED','RETRIEVAL_FAILED','UNAVAILABLE', 'NOT_ATTEMPTED', 'IN_PROCESS') ),
               UNIQUE(county, municipality, year)  -- Ensures uniqueness for each entry
             )`, (err) => {
             if (err) {
