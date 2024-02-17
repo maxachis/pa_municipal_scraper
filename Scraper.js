@@ -1,9 +1,9 @@
 
-
 const {launchBrowser, actionWithRetry, finReportSelectors} = require("./util");
 const sqlite3 = require("sqlite3");
 const fs = require("fs");
 const ExcelExtractor = require("./ExcelExtractor");
+const uuid = require("uuid");
 const displayButtonSelector = 'input[id="ContentPlaceHolder1_btnDisplay"]';
 const errorSpanSelector = 'span[id="ContentPlaceHolder1_lblError"]';
 const errorMessage = "This report is not available at this time"
@@ -11,17 +11,22 @@ const errorMessage = "This report is not available at this time"
 
 class Scraper {
 
-    constructor() {
+    constructor(identifier = 'default') {
+        this.identifier = identifier;
         this.page = null;
         this.client = null;
         this.browser = null;
         this.db = null;
         this.excel_extractor = null;
+        // Use the identifier to create a unique download path for each instance
+        this.downloadPath = `${process.cwd()}\\Outputs\\${this.identifier}`;
+        this.excelPath = `${this.downloadPath}\\mAfrForm.xlsx`;
     }
 
     // Static async factory method
     static async build(url) {
-        const scraper = new Scraper();
+        const identifier = uuid.v4(); // Generate a unique identifier
+        const scraper = new Scraper(identifier);
         const {page, client, browser} = await launchBrowser(url, true);
         scraper.page = page;
         scraper.client = client;
@@ -34,8 +39,6 @@ class Scraper {
             }
         });
         scraper.excel_extractor = new ExcelExtractor();
-        scraper.downloadPath = process.cwd() + '\\Outputs'
-        scraper.excelPath = scraper.downloadPath + '\\mAfrForm.xlsx'
         await scraper.ensureDirectoryExists(scraper.downloadPath);
         await scraper.setupDownloadDirectory(client);
 
@@ -150,8 +153,6 @@ class Scraper {
     }
 
     async downloadReport() {
-        // Download the
-
         await actionWithRetry(async () => {
             const isErrorPresent = await this.checkIfErrorPresent(this.page);
             if (isErrorPresent) {
