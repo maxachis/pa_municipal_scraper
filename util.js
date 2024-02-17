@@ -24,7 +24,7 @@ const puppeteer = require('puppeteer');
     page.on('error', err => console.log('PAGE ERROR:', err.message));
     page.on('pageerror', err => console.log('PAGE ERROR:', err.message));
 
-    console.log('Navigated to page');
+    console.log(`Navigated to page ${url}`);
 
     // Return both page and client in an object
     return { page, client };
