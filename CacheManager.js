@@ -79,26 +79,6 @@ class CacheManager {
         stmt.finalize();
     };
 
-    checkFinReportEntry(county, municipality, year) {
-        this.db.get(`SELECT * FROM FinReportCache WHERE county = ? AND municipality = ? AND year = ?`, [county, municipality, year], (err, row) => {
-            if (err) {
-                console.error('Error querying cache', err.message);
-            }
-            if (row) {
-                console.log('Entry found:', row);
-                return true;
-            } else {
-                console.log('No entry found.');
-                return false;
-            }
-        });
-    };
-
-    checkFinReportmunicipality(county, municipality) {
-        // Check if there
-    };
-
-
     close() {
         this.db.close((err) => {
             if (err) {
