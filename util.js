@@ -20,7 +20,7 @@ const puppeteer = require('puppeteer');
     const page = await browser.newPage()
     const client = await page.target().createCDPSession();
     await page.goto(url, { waitUntil: 'networkidle2' });
-    page.on('console', msg => console.log('PAGE LOG:', msg.text()));
+    // page.on('console', msg => console.log('PAGE LOG:', msg.text()));
     page.on('error', err => console.log('PAGE ERROR:', err.message));
     page.on('pageerror', err => console.log('PAGE ERROR:', err.message));
 
@@ -69,7 +69,7 @@ const actionWithRetry = async (action, retryErrorMessages = [
             lastError = error; // Update lastError with the current error
             const shouldRetry = retryErrorMessages.some(errorMessage => error.message.includes(errorMessage));
             if (shouldRetry) {
-                console.log(`Attempt ${attempt} failed, retrying...`);
+                // console.log(`Attempt ${attempt} failed, retrying...`);
                 await new Promise(r => setTimeout(r, 1000 * attempt)); // Wait longer after each retry
                 continue; // Continue to the next attempt
             }
@@ -79,8 +79,6 @@ const actionWithRetry = async (action, retryErrorMessages = [
     console.error('Max retries exceeded. Last error:', lastError);
     throw lastError; // Throw the last encountered error
 };
-
-
 
 const municipalitySelector = 'select[id=ContentPlaceHolder1_ddMuniId]'
 

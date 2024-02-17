@@ -33,6 +33,8 @@ class CacheManager {
               municipality TEXT,
               year INTEGER,
               download_url TEXT,
+              police_expenditures REAL,
+              total_expenditures REAL,
               status TEXT CHECK( status IN ('RETRIEVED','RETRIEVAL_FAILED','UNAVAILABLE', 'NOT_ATTEMPTED') ),
               UNIQUE(county, municipality, year)  -- Ensures uniqueness for each entry
             )`, (err) => {

@@ -49,7 +49,7 @@ class ExcelExtractor {
             // Console log the cell name and the value of the cell
             const cellName = `${column}${R}`;
             const cellValue = this.getCellValue(cellName);
-            console.log(cellName, cellValue);
+            // console.log(cellName, cellValue);
             if (cellValue !== null && cellValue.trim() === text) {
                 return R;
             }
@@ -59,9 +59,10 @@ class ExcelExtractor {
 
     getPoliceAndTotalExpenditures() {
         this.loadSheet(SHEET.REVENUES_AND_EXPENDITURES);
-        const ExpenditureNameColumn = "B";
+        const ExpenditureCodeColumn = "A";
+        const ExpenditureNameColumn = "B"
         const ExpenditureValueColumn = "J";
-        const policeRow = this.findRowInColumnWithText(ExpenditureNameColumn, "Police");
+        const policeRow = this.findRowInColumnWithText(ExpenditureCodeColumn, "410.00");
         const policeExpenditure = this.getCellValue(`${ExpenditureValueColumn}${policeRow}`);
 
         const totalRow = this.findRowInColumnWithText(ExpenditureNameColumn, "TOTAL EXPENDITURES");
@@ -72,8 +73,11 @@ class ExcelExtractor {
 }
 
 // Main
-const extractor = new ExcelExtractor();
-// Load file from Temp directory using relative address
-const filePath = path.join(__dirname, 'Temp', 'mAfrForm.xlsx');
-extractor.loadWorkbook(filePath);
-console.log(extractor.getPoliceAndTotalExpenditures())
+// const extractor = new ExcelExtractor();
+// // Load file from Temp directory using relative address
+// const filePath = path.join(__dirname, 'Outputs', 'mAfrForm.xlsx');
+// extractor.loadWorkbook(filePath);
+// console.log(extractor.getPoliceAndTotalExpenditures())
+
+// Export
+module.exports = ExcelExtractor;
