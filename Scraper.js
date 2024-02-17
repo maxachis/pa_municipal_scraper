@@ -19,8 +19,6 @@ class Scraper {
         this.excel_extractor = null;
     }
 
-
-
     // Static async factory method
     static async build(url) {
         const scraper = new Scraper();
@@ -61,25 +59,18 @@ class Scraper {
         }
     }
 
-
-
-
-    async getUnretrievedSelections() {
-        // Get all the unretrieved selections from the database
-        return this.db.all(`SELECT county, municipality, year 
-            FROM FinReportCache WHERE status in ('NOT_ATTEMPTED', 'RETRIEVAL_FAILED')
-            ORDER BY county, municipality, year`,
-            (err, rows) => {
-                if (err) {
-                    console.error('Error getting unretrieved selections', err.message);
-                }
-                return rows;
-            });
-    }
-
     async scrapeUnretrievedReports() {
         // Scrape all the unretrieved reports
-        const unretrievedSelections = await new Promise((resolve, reject) => {
+        const unretrievedSelections = await this.getUnretrievedReports();
+
+        for (const selection of unretrievedSelections) {
+            await this.scrapeReport(selection);
+            // break;
+        }
+    }
+
+    async getUnretrievedReports() {
+        return await new Promise((resolve, reject) => {
             this.db.all(`SELECT county, municipality, year
                 FROM FinReportCache WHERE status in ('NOT_ATTEMPTED', 'RETRIEVAL_FAILED')
                 ORDER BY county, municipality, year`,
@@ -92,14 +83,9 @@ class Scraper {
                     }
                 });
         });
-
-        for (const selection of unretrievedSelections) {
-            await this.scrapeReport(selection);
-            // break;
-        }
     }
 
-   waitForFileDownload(filePath, timeout = 30000) {
+    waitForFileDownload(filePath, timeout = 30000) {
     let prevFileSize = 0;
     let retries = timeout / 1000; // Check every second
     // console.log('Waiting for file download at ', filePath)
@@ -154,32 +140,6 @@ class Scraper {
         }, ['not found for selector']);
     }
 
-
-    async getDownloadUrl() {
-        // Get the download URL for the report
-        return await this.page.evaluate(() => {
-            const baseUrl = 'https://munstats.pa.gov';
-            const exportUrlBase = $find('ctl00_ContentPlaceHolder1_rvReport')._getInternalViewer().ExportUrlBase;
-            const format = encodeURIComponent("EXCELOPENXML");
-            return baseUrl + exportUrlBase + format;
-        });
-    }
-
-    async downloadByUrl(downloadUrl) {
-        await actionWithRetry(async () => {
-            await this.page.evaluate(async (downloadUrl) => {
-                const response = await fetch(downloadUrl);
-                const blob = await response.blob();
-                const a = document.createElement('a');
-                a.href = window.URL.createObjectURL(blob);
-                a.download = 'filename.ext'; // You might need to set a filename
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(a.href);
-                document.body.removeChild(a);
-            }, downloadUrl);
-        });
-    }
 
     async  checkIfErrorPresent(page) {
         return await page.evaluate((selector, errorMessage) => {
