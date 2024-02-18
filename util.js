@@ -7,27 +7,34 @@ const puppeteer = require('puppeteer');
     NOT_ATTEMPTED: 'NOT_ATTEMPTED'
 });
 
- async function launchBrowser(url, headless = true) {
+async function launchBrowser(url, headless = true, logFunction = console.log) {
     const browser = await puppeteer.launch({
         headless: headless,
         args: ["--incognito"]
     });
-    const { page, client } = await setupAndNavigate(browser, url);
+    const { page, client } = await setupAndNavigate(browser, url, logFunction);
     return { page, client, browser };
 }
 
- async function setupAndNavigate(browser, url) {
-    const page = await browser.newPage()
-    const client = await page.target().createCDPSession();
-    await page.goto(url, { waitUntil: 'networkidle2' });
-    // page.on('console', msg => console.log('PAGE LOG:', msg.text()));
-    page.on('error', err => console.log('PAGE ERROR:', err.message));
-    page.on('pageerror', err => console.log('PAGE ERROR:', err.message));
+async function setupAndNavigate(browser, url, logFunction = console.log) {
+    try {
+        const page = await browser.newPage();
+        const client = await page.target().createCDPSession();
+        await page.goto(url, { waitUntil: 'networkidle2' });
 
-    console.log(`Navigated to page ${url}`);
+        page.on('console', msg => logFunction(`PAGE LOG: ${msg.text()}`));
+        page.on('error', err => logFunction(`PAGE ERROR: ${err.message}`));
+        page.on('pageerror', err => {logFunction('PAGE ERROR:', err.message);});
 
-    // Return both page and client in an object
-    return { page, client };
+        logFunction(`Navigated to page ${url}`);
+
+        // Return both page and client in an object
+        return { page, client };
+    } catch (error) {
+        logFunction('Error in setupAndNavigate:', error.message);
+        // Handle the error as needed, e.g., by rethrowing it or logging it
+        throw error;
+    }
 }
 
  async function selectOption(page, selector, value) {
