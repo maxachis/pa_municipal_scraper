@@ -6,6 +6,7 @@ const downloadPathRoot = process.cwd();
 const displayButtonSelector = 'input[id="ContentPlaceHolder1_btnDisplay"]';
 
 const {actionWithRetry, selectOption} = require('./util');
+const {runScraperManager} = require("./ScraperManager");
 
 
 
@@ -130,7 +131,7 @@ async function downloadReport(page, client, countyName, authorityName, yearValue
     if (command === 'prepareCache') {
         await prepareCache(url);
     } else if (command === 'scrapeData') {
-        await scrapeData();
+        await runScraperManager();
     } else if (command === 'resetCache') {
         await resetCache();
     } else {
