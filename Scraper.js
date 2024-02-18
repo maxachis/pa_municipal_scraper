@@ -11,38 +11,52 @@ const errorMessage = "This report is not available at this time"
 
 class Scraper {
 
-    constructor(identifier = 'default') {
-        this.identifier = identifier;
+    constructor() {
+        this.identifier = null;
+        this.status = 'Idle';
         this.page = null;
         this.client = null;
         this.browser = null;
         this.db = null;
         this.excel_extractor = null;
         // Use the identifier to create a unique download path for each instance
-        this.downloadPath = `${process.cwd()}\\Outputs\\${this.identifier}`;
-        this.excelPath = `${this.downloadPath}\\mAfrForm.xlsx`;
+
     }
 
     // Static async factory method
-    static async build(url) {
-        const identifier = uuid.v4(); // Generate a unique identifier
-        const scraper = new Scraper(identifier);
-        const {page, client, browser} = await launchBrowser(url, true);
-        scraper.page = page;
-        scraper.client = client;
-        scraper.browser = browser;
-        scraper.db = new sqlite3.Database('./scraperCache.db', sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
+    async build(url, identifier = uuid.v4()) {
+        this.identifier = identifier;
+        this.downloadPath = `${process.cwd()}\\Outputs\\${this.identifier}`;
+        this.logFilePath = `${process.cwd()}\\ErrorLogs\\${this.identifier}.txt`;
+        fs.writeFile(this.logFilePath, '', err => {
+            if (err) {
+                console.error('Failed to clear log file:', err);
+            }
+        });
+        this.excelPath = `${this.downloadPath}\\mAfrForm.xlsx`;
+        this.db = new sqlite3.Database('./scraperCache.db', sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
             if (err) {
                 console.error('Error when connecting to the cache database', err.message);
             } else {
                 console.log('Connected to the cache database.');
             }
         });
-        scraper.excel_extractor = new ExcelExtractor();
-        await scraper.ensureDirectoryExists(scraper.downloadPath);
-        await scraper.setupDownloadDirectory(client);
+        this.excel_extractor = new ExcelExtractor();
+        await this.ensureDirectoryExists(this.downloadPath);
+        await this.ensureDirectoryExists(`${process.cwd()}\\ErrorLogs`);
+        const {page, client, browser} = await launchBrowser(url, true, this.logError.bind(this));
+        this.page = page;
+        this.client = client;
+        this.browser = browser;
+        await this.setupDownloadDirectory(client);
+    }
 
-        return scraper;
+    logError(message) {
+        fs.appendFile(this.logFilePath, message + '\n', err => {
+            if (err) {
+                console.error('Failed to write to log file:', err);
+            }
+        });
     }
 
     async setupDownloadDirectory(client) {
@@ -51,6 +65,13 @@ class Scraper {
             downloadPath: this.downloadPath
         });
     }
+
+    updateStatus(newStatus) {
+        this.status = newStatus;
+    }
+
+
+
 
     async ensureDirectoryExists(directoryPath) {
         try {
@@ -62,32 +83,6 @@ class Scraper {
         }
     }
 
-    async scrapeUnretrievedReports() {
-        // Scrape all the unretrieved reports
-        const unretrievedSelections = await this.getUnretrievedReports();
-
-        for (const selection of unretrievedSelections) {
-            await this.scrapeReport(selection);
-            // break;
-        }
-    }
-
-    async getUnretrievedReports() {
-        return await new Promise((resolve, reject) => {
-            this.db.all(`SELECT county, municipality, year
-                FROM FinReportCache WHERE status in ('NOT_ATTEMPTED', 'RETRIEVAL_FAILED')
-                ORDER BY county, municipality, year`,
-                (err, rows) => {
-                    if (err) {
-                        console.error('Error getting unretrieved selections', err.message);
-                        reject(err);
-                    } else {
-                        resolve(rows);
-                    }
-                });
-        });
-    }
-
     waitForFileDownload(filePath, timeout = 30000) {
     let prevFileSize = 0;
     let retries = timeout / 1000; // Check every second
@@ -97,13 +92,13 @@ class Scraper {
         const interval = setInterval(() => {
         fs.stat(filePath, (err, stats) => {
             if (err) {
-                console.log('An error occurred while checking the file stats:', err);
+                this.logError(`An error occurred while checking the file stats: ${err}`);
                 if (err.code === 'ENOENT' && retries > 0) {
-                    console.log('File not found, waiting and trying again');
+                    this.logError('File not found, waiting and trying again');
                     retries--;
                     return;
                 }
-                console.log('Stopping due to an error');
+                this.logError('Stopping due to an error');
                 clearInterval(interval);
                 return reject(err);
             }
@@ -131,7 +126,6 @@ class Scraper {
             const {value, options} = await this.page.evaluate((selector, text) => {
                 const select = document.querySelector(selector);
                 const options = Array.from(select.options).map(opt => opt.text);
-                // If option is not undefined, console.log the value of the option
                 const option = Array.from(select.options).find(opt => opt.text === text.toString());
                 return { value: option ? option.value : null, options };
             }, selector, text);
@@ -153,17 +147,16 @@ class Scraper {
     }
 
     async downloadReport() {
-        await actionWithRetry(async () => {
-            const isErrorPresent = await this.checkIfErrorPresent(this.page);
-            if (isErrorPresent) {
-                console.log('Error message detected, not proceeding with exportReport.');
-                return;
-            }
-            await this.page.evaluate(() => {
-                console.log("Proceeding with export")
-                $find('ctl00_ContentPlaceHolder1_rvReport').exportReport('EXCELOPENXML');
+        try {
+            await actionWithRetry(async () => {
+                await this.page.evaluate(() => {
+                    $find('ctl00_ContentPlaceHolder1_rvReport').exportReport('EXCELOPENXML');
+                });
             });
-        });
+        } catch (error) {
+            this.logError(`Error in downloadReport: ${error}`);
+            throw error;
+        }
     }
 
     async deleteFile(filePath) {
@@ -172,7 +165,7 @@ class Scraper {
     }
 
     async scrapeReport(selection) {
-        console.log('Scraping report for', selection)
+        // console.log(`${this.identifier}:  Scraping report for ${selection.county}, ${selection.municipality}, ${selection.year}`)
         for (const {selector, type} of finReportSelectors) {
             await this.selectOptionByText(selector, selection[type]);
         }
@@ -186,6 +179,9 @@ class Scraper {
         this.excel_extractor.loadWorkbook(this.excelPath);
         // Obtain police and total expenditures
         const {policeExpenditure, totalExpenditure} = this.excel_extractor.getPoliceAndTotalExpenditures()
+        // Return the police and total expenditures
+        return {policeExpenditure, totalExpenditure}
+
         // Update the cache with the police and total expenditures
         this.updateEntryExpenditures(selection.county, selection.municipality, selection.year, policeExpenditure, totalExpenditure);
 
@@ -198,13 +194,7 @@ class Scraper {
         }, {polling: 'mutation'}, displayButtonSelector);
     }
 
-    async updateEntryStatus(county, municipality, year, status) {
-        this.db.run(`UPDATE FinReportCache SET status = ? WHERE county = ? AND municipality = ? AND year = ?`, [status, county, municipality, year], (err) => {
-            if (err) {
-                console.error('Error updating cache', err.message);
-            }
-        });
-    }
+
 
     async updateEntryExpenditures(county, municipality, year, police_expenditures, total_expenditures) {
         this.db.run(`UPDATE FinReportCache SET police_expenditures = ?, total_expenditures = ?, status='RETRIEVED'
@@ -214,11 +204,10 @@ class Scraper {
                 console.error('Error updating cache', err.message);
             }
         });
-        console.log('Updated cache with police and total expenditures')
+        console.log(`${this.identifier}: Updated ${county}, ${municipality}, ${year} with police and total expenditures`)
     }
 
     async clickDisplayReportButton(page) {
-        // console.log("Attempting to click Display Report button")
         await actionWithRetry(async () => {
             await page.waitForFunction((selector) => {
                 const element = document.querySelector(selector);
@@ -229,16 +218,9 @@ class Scraper {
                 page.click(displayButtonSelector, {waitUntil: 'networkidle2'}),
             ]);
         });
-        // console.log('Clicked Display Report button')
     }
 }
 
-async function scrapeData() {
-    const scraper = await Scraper.build('https://munstats.pa.gov/Reports/ReportInformation2.aspx?report=mAfrForm');
-    await scraper.scrapeUnretrievedReports();
-    // Wait 3 seconds
-    await new Promise(r => setTimeout(r, 3000));
-    await scraper.browser.close();
-}
 
-module.exports = {scrapeData};
+
+module.exports = {Scraper};
