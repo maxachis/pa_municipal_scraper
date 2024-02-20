@@ -7,7 +7,7 @@ const uuid = require("uuid");
 const displayButtonSelector = 'input[id="ContentPlaceHolder1_btnDisplay"]';
 const errorSpanSelector = 'span[id="ContentPlaceHolder1_lblError"]';
 const errorMessage = "This report is not available at this time"
-
+const reportChildSelector = 'div[id="VisibleReportContentctl00_ContentPlaceHolder1_rvReport_ctl09"] > div';
 
 class Scraper {
 
@@ -171,9 +171,12 @@ class Scraper {
         }
         await this.clickDisplayReportButton(this.page);
         await this.waitForDisplayReportButtonToBeReEnabled();
+        // Wait for report child to be present
+        await this.page.waitForSelector(reportChildSelector, {timeout: 120000});
         // const url = await this.getDownloadUrl()
         // await this.downloadByUrl(url);
         await this.downloadReport();
+
         await this.waitForFileDownload(this.excelPath, 3000);
         // console.log('Downloaded file')
         this.excel_extractor.loadWorkbook(this.excelPath);
