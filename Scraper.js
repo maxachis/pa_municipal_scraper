@@ -2,7 +2,7 @@
 const {launchBrowser, actionWithRetry, finReportSelectors} = require("./util");
 const sqlite3 = require("sqlite3");
 const fs = require("fs");
-const ExcelExtractor = require("./ExcelExtractor");
+const MuniFinExtractor = require("MuniFinExtractor");
 const uuid = require("uuid");
 const displayButtonSelector = 'input[id="ContentPlaceHolder1_btnDisplay"]';
 const errorSpanSelector = 'span[id="ContentPlaceHolder1_lblError"]';
