@@ -15,6 +15,8 @@ const path = require('path');
 const fs = require('fs');
 const {scrapeData} = require("./Scraper");
 const { prepareCache, resetCache } = require('./CacheManager');
+const extractPoliceDetails = require("./Scripts/PoliceDetailsScraper/PoliceDetailsExtractor");
+const extractMuniDemoData = require("./Scripts/MuniDemographicsScraper/MuniDemoExtractor");
 
 
 function xlsxExists(directory) {
@@ -134,6 +136,10 @@ async function downloadReport(page, client, countyName, authorityName, yearValue
         await runScraperManager();
     } else if (command === 'resetCache') {
         await resetCache();
+    } else if (command === 'extractPoliceDetails') {
+        await extractPoliceDetails();
+    } else if (command === 'extractMuniDemoData'){
+        await extractMuniDemoData();
     } else {
         console.error('Invalid command:', command);
         process.exit(1);
