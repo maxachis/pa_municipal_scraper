@@ -183,6 +183,7 @@ class Scraper {
         this.excel_extractor.loadWorkbook(this.excelPath);
         // Obtain police and total expenditures
         const {policeExpenditure, totalExpenditure} = this.excel_extractor.getPoliceAndTotalExpenditures()
+        await this.deleteFile(this.excelPath);
         // Return the police and total expenditures
         return {policeExpenditure, totalExpenditure}
     }
