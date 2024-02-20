@@ -34,7 +34,7 @@ class ScraperManager {
         console.clear();
         console.log(statusLines.join('\n'));
         // Additionally log the total entries processed and the average number processed per minute
-        console.log(`Total entries processed: ${this.totalEntriesProcessed}`);
+        console.log(`Total entries processed: ${this.totalEntriesProcessed} (${this.totalSuccesses} successful)`);
         console.log(`Average entries processed per minute: ${this.totalEntriesProcessed / ((Date.now() - this.startTime) / 60000)}`);
     }
 
@@ -197,7 +197,7 @@ class ScraperManager {
 
 // Create function to run the scraper manager
 async function runScraperManager() {
-    const manager = new ScraperManager(10);
+    const manager = new ScraperManager(1);
     await manager.init();
     await manager.runScrapers();
     await manager.cleanupAfterCompletion();
