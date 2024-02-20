@@ -41,7 +41,7 @@ class Scraper {
                 console.log('Connected to the cache database.');
             }
         });
-        this.excel_extractor = new ExcelExtractor();
+        this.excel_extractor = new MuniFinExtractor();
         await this.ensureDirectoryExists(this.downloadPath);
         await this.ensureDirectoryExists(`${process.cwd()}\\ErrorLogs`);
         const {page, client, browser} = await launchBrowser(url, true, this.logError.bind(this));
