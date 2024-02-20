@@ -63,12 +63,26 @@ class CacheManager {
               police_expenditures REAL,
               total_expenditures REAL,
               status TEXT CHECK( status IN ('RETRIEVED','RETRIEVAL_FAILED','UNAVAILABLE', 'NOT_ATTEMPTED', 'IN_PROCESS') ),
+              last_updated DATETIME,
               UNIQUE(county, municipality, year)  -- Ensures uniqueness for each entry
             )`, (err) => {
             if (err) {
                 console.error('Error creating table', err.message);
             } else {
                 console.log('Table is created or already exists.');
+            }
+        });
+        // Create triggers
+        this.db.run(`CREATE TRIGGER update_fin_report_last_updated
+            AFTER UPDATE ON FinReportCache
+            FOR EACH ROW
+            BEGIN
+                UPDATE FinReportCache SET last_updated = CURRENT_TIMESTAMP WHERE id = OLD.id;
+            END;`, (err) => {
+            if (err) {
+                console.error('Error creating trigger', err.message);
+            } else {
+                console.log('Trigger is created or already exists.');
             }
         });
     }
