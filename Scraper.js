@@ -134,7 +134,8 @@ class Scraper {
             } else {
                 throw new Error(`Option with text "${text}" not found for selector "${selector}". Available options are: ${options.join(', ')}`);
             }
-        }, ['not found for selector']);
+        }, ['not found for selector'],
+            6);
     }
 
 
