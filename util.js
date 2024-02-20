@@ -1,4 +1,5 @@
 const puppeteer = require('puppeteer');
+const UserAgent = require('user-agents');
 
  const Status = Object.freeze({
     RETRIEVED: 'RETRIEVED',
@@ -20,7 +21,12 @@ async function setupAndNavigate(browser, url, logFunction = console.log) {
     try {
         const page = await browser.newPage();
         const client = await page.target().createCDPSession();
-        await page.goto(url, { waitUntil: 'networkidle2' });
+        await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
+
+        // Get random user agent
+        const randomUserAgent = new UserAgent({ deviceCategory: 'desktop' });
+        await page.setUserAgent(randomUserAgent.toString());
+
 
         page.on('console', msg => logFunction(`PAGE LOG: ${msg.text()}`));
         page.on('error', err => logFunction(`PAGE ERROR: ${err.message}`));
