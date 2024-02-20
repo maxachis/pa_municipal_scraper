@@ -7,6 +7,7 @@ class ScraperManager {
         this.concurrency = concurrency;
         this.statuses = Array.from({ length: concurrency }, () => 'Idle');
         this.totalEntriesProcessed = 0;
+        this.totalSuccesses = 0;
         this.startTime = Date.now();
         this.activeScrapers = [];
         this.dbPath = './scraperCache.db';
@@ -155,6 +156,7 @@ class ScraperManager {
                     await this.updateEntryExpenditures(selection.county, selection.municipality, selection.year, policeExpenditure, totalExpenditure);
                     scraper.updateStatus('Idle');
                     this.updateStatuses(index, 'Idle');
+                    this.totalSuccesses++;
                     break; // Break out of the for loop if the scrape was successful
                 } catch (error) {
                     scraper.logError(`Error scraping report for ${selection.county}, ${selection.municipality}, ${selection.year}: ${error}`);
