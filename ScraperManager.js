@@ -116,8 +116,19 @@ class ScraperManager {
         const url = 'https://munstats.pa.gov/Reports/ReportInformation2.aspx?report=mAfrForm'
         // Initialize all scrapers and start the scraping process
         const scraperPromises = scrapers.map(async (scraper, index) => {
-            await scraper.build(url, `scraper${index}`); // Pass the index or a unique identifier if needed
-            await this.processTasks(scraper, index);
+            const maxRetries = 3; // Maximum number of retries
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    await scraper.build(url, `scraper${index}`); // Pass the index or a unique identifier if needed
+                    await this.processTasks(scraper, index);
+                    break; // Break out of the for loop if the build was successful
+                } catch (error) {
+                    console.error(`Error building scraper for index ${index}: ${error}`);
+                    if (attempt === maxRetries - 1) { // If the retry limit is reached, throw the error
+                        throw error;
+                    }
+                }
+            }
         });
 
         await Promise.all(scraperPromises);
