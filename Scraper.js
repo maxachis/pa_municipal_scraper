@@ -181,10 +181,6 @@ class Scraper {
         const {policeExpenditure, totalExpenditure} = this.excel_extractor.getPoliceAndTotalExpenditures()
         // Return the police and total expenditures
         return {policeExpenditure, totalExpenditure}
-
-        // Update the cache with the police and total expenditures
-        this.updateEntryExpenditures(selection.county, selection.municipality, selection.year, policeExpenditure, totalExpenditure);
-
     }
 
     async waitForDisplayReportButtonToBeReEnabled() {
@@ -196,16 +192,7 @@ class Scraper {
 
 
 
-    async updateEntryExpenditures(county, municipality, year, police_expenditures, total_expenditures) {
-        this.db.run(`UPDATE FinReportCache SET police_expenditures = ?, total_expenditures = ?, status='RETRIEVED'
-            WHERE county = ? AND municipality = ? AND year = ?`,
-            [police_expenditures, total_expenditures, county, municipality, year], (err) => {
-            if (err) {
-                console.error('Error updating cache', err.message);
-            }
-        });
-        console.log(`${this.identifier}: Updated ${county}, ${municipality}, ${year} with police and total expenditures`)
-    }
+
 
     async clickDisplayReportButton(page) {
         await actionWithRetry(async () => {
