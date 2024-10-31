@@ -77,48 +77,6 @@ async function downloadReport(page, client, countyName, authorityName, yearValue
     });
 }
 
-// async function prepareCache() {
-//     // This function should be called before the main loop to ensure that the cache is prepared
-//     // Cache preparation entails:
-//     // - Ensuring the database is created (or, if created, truncated)
-//     // - Ensuring the table is created
-//     // - Iterating through all possible combinations of country, authority, and year,
-//     //    and inserting them into the cache with a status of 'NOT_ATTEMPTED'
-//     // - Ensuring that the database is closed
-//
-//     const cache_manager = new CacheManager();
-//     cache_manager.createFinReportTable();
-//     cache_manager.truncateFinReportTable();
-//     const { page, _, browser } = await launchBrowser(url);
-//
-//     const countyOptions = await getOptions(page, countySelector);
-//     let oldAuthorityOptions = await getOptions(page, authoritySelector);
-//     for (const countyValue of countyOptions) {
-//         if (countyValue === "-1") continue;
-//         await selectOption(page, countySelector, countyValue);
-//         const countyName = await getSelectedOptionText(page, countySelector);
-//         console.log('Selected county:', countyName);
-//         let newAuthorityOptions = await getOptions(page, authoritySelector, oldAuthorityOptions);
-//         for (const authorityValue of newAuthorityOptions) {
-//             if (authorityValue === "-1") continue;
-//             await selectOption(page, authoritySelector, authorityValue);
-//             const authorityName = await getSelectedOptionText(page, authoritySelector);
-//             console.log('Selected authority:', authorityName);
-//
-//             const yearOptions = await getOptions(page, yearSelector);
-//             for (const yearValue of yearOptions) {
-//                 if (yearValue === "-1") continue;
-//                 cache_manager.cacheFinReportData(countyName, authorityName, yearValue, Status.NOT_ATTEMPTED);
-//             }
-//         }
-//     }
-//     await browser.close()
-//     cache_manager.close();
-//
-// }
-
-
-
 // TODO: Modify so that these functions are all part of a single class so that certain resources (eg, db, browser)
 //  can be shared
 
